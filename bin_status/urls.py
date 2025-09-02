@@ -6,6 +6,7 @@ router = DefaultRouter()
 router.register(r'bin-status', BinStatusViewSet, basename='bin-status')
 
 urlpatterns = [
-    path('', include(router.urls)),
     path('bin-status/latest/', latest_bin_status), 
+    path('', include(router.urls)),
+    
 ]
