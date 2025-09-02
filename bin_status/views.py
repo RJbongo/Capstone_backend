@@ -7,34 +7,37 @@ from .serializers import BinStatusSerializer
 
 # BinStatus ViewSet
 class BinStatusViewSet(viewsets.ModelViewSet):
-    queryset = BinStatus.objects.all()
+    queryset = BinStatus.objects.all().order_by("-updated_at")
     serializer_class = BinStatusSerializer
 
     def get_permissions(self):
-        # Allow unauthenticated access to the list and retrieve actions
+        # Allow unauthenticated access to list/retrieve/create
         if self.action in ['list', 'retrieve', 'create']:
             return [AllowAny()]
-        return [IsAuthenticated()]  # Only authenticated users can create, update, delete
+        return [IsAuthenticated()]
 
-# Latest Bin Status View
+    def create(self, request, *args, **kwargs):
+        # Fill missing fields with "not full" if only one bin is sent
+        data = request.data.copy()
+        if "bio_status" not in data:
+            data["bio_status"] = "not full"
+        if "non_bio_status" not in data:
+            data["non_bio_status"] = "not full"
+
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return Response(serializer.data, status=201)
+
+# Latest Bin Status View (for frontend)
 @api_view(['GET'])
-@permission_classes([AllowAny])  # Allow unauthenticated access to this view
+@permission_classes([AllowAny])
 def latest_bin_status(request):
-    try:
-        # Fetch the latest BinStatus instance
-        latest_status = BinStatus.objects.last()
-
-        if latest_status:
-            # Transform the bio_status and recyclable_status
-            data = {
-                'bio_status': 'empty' if latest_status.bio_status == 'not full' else 'full',
-                'non_bio_status': 'empty' if latest_status.non_bio_status == 'not full' else 'full',
-            }
-            return Response(data)
-        else:
-            return Response({"detail": "No bin status available."}, status=404)
-
-    except Exception as e:
-        # Handle any unexpected errors
-        return Response({"detail": str(e)}, status=500)
-
+    latest_status = BinStatus.objects.last()
+    if latest_status:
+        data = {
+            'bio_status': 'empty' if latest_status.bio_status == 'not full' else 'full',
+            'non_bio_status': 'empty' if latest_status.non_bio_status == 'not full' else 'full',
+        }
+        return Response(data)
+    return Response({"detail": "No bin status available."}, status=404)
