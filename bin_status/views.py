@@ -11,7 +11,7 @@ class BinStatusViewSet(viewsets.ModelViewSet):
     serializer_class = BinStatusSerializer
 
     def get_permissions(self):
-        # Allow unauthenticated access to list/retrieve/create
+        # Allow access to list/retrieve/create
         if self.action in ['list', 'retrieve', 'create']:
             return [AllowAny()]
         return [IsAuthenticated()]
@@ -29,6 +29,7 @@ class BinStatusViewSet(viewsets.ModelViewSet):
         self.perform_create(serializer)
         return Response(serializer.data, status=201)
 
+
 # Latest Bin Status View (for frontend)
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -36,8 +37,8 @@ def latest_bin_status(request):
     latest_status = BinStatus.objects.last()
     if latest_status:
         data = {
-            'bio_status': 'empty' if latest_status.bio_status == 'not full' else 'full',
-            'non_bio_status': 'empty' if latest_status.non_bio_status == 'not full' else 'full',
+            'bio_status': latest_status.bio_status,
+            'non_bio_status': latest_status.non_bio_status,
         }
         return Response(data)
     return Response({"detail": "No bin status available."}, status=404)
